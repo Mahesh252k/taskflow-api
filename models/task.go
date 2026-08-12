@@ -12,3 +12,15 @@ type Task struct {
 	UserID uint `json:"user_id"`
 	User   User `json:"user"`
 }
+
+type Pagination struct {
+	Page       int   `json:"page"`
+	Limit      int   `json:"limit"`
+	Total      int64 `json:"total"`
+	TotalPages int   `json:"total_pages"`
+}
+
+type TaskListResponse struct {
+	Data       []Task     `json:"data"`
+	Pagination Pagination `json:"pagination"`
+}

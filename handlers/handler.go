@@ -45,6 +45,7 @@ func GetTasks(c *gin.Context) {
 			})
 			return
 		}
+
 		filter.Done = &done
 	}
 
@@ -60,7 +61,7 @@ func GetTasks(c *gin.Context) {
 		filter.UserID = uint(userID)
 	}
 
-	tasks, err := services.GetTasks(page, limit, filter)
+	response, err := services.GetTasks(page, limit, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "internal server error",
@@ -68,7 +69,7 @@ func GetTasks(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, tasks)
+	c.JSON(http.StatusOK, response)
 }
 
 func CreateTask(c *gin.Context) {

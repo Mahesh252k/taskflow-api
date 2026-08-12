@@ -17,8 +17,9 @@ var (
 	ErrUserRequired  = errors.New("user ID is required")
 )
 
-func GetTasks(page, limit int, filter models.TaskFilter) ([]models.Task, error) {
+func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListResponse, error) {
 	var tasks []models.Task
+	var total int64
 
 	query := database.DB.Model(&models.Task{}).
 		Preload("User")
@@ -39,6 +40,11 @@ func GetTasks(page, limit int, filter models.TaskFilter) ([]models.Task, error) 
 
 	if filter.UserID != 0 {
 		query = query.Where("user_id = ?", filter.UserID)
+	}
+
+	// Count AFTER filters, BEFORE pagination
+	if err := query.Count(&total).Error; err != nil {
+		return models.TaskListResponse{}, err
 	}
 
 	allowedSorts := map[string]bool{
@@ -67,10 +73,20 @@ func GetTasks(page, limit int, filter models.TaskFilter) ([]models.Task, error) 
 		Limit(limit)
 
 	if err := query.Find(&tasks).Error; err != nil {
-		return nil, err
+		return models.TaskListResponse{}, err
 	}
 
-	return tasks, nil
+	pagination := models.Pagination{
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: int((total + int64(limit) - 1) / int64(limit)),
+	}
+
+	return models.TaskListResponse{
+		Data:       tasks,
+		Pagination: pagination,
+	}, nil
 }
 
 func CreateTask(task models.Task) (models.Task, error) {
