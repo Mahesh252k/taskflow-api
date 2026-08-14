@@ -105,16 +105,20 @@ func GetTasks(c *gin.Context) {
 }
 
 func CreateTask(c *gin.Context) {
-	var task models.Task
+	var createTaskRequest models.CreateTaskRequest
 
-	if err := c.ShouldBindJSON(&task); err != nil {
+	if err := c.ShouldBindJSON(&createTaskRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
 		})
 		return
 	}
 
-	createdTask, err := services.CreateTask(task)
+	createdTask, err := services.CreateTask(models.Task{
+		Title:       createTaskRequest.Title,
+		Description: createTaskRequest.Description,
+		UserID:      createTaskRequest.UserID,
+	})
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrTitleRequired),
@@ -136,7 +140,15 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, createdTask)
+	response := models.TaskResponse{
+		ID:          createdTask.ID,
+		Title:       createdTask.Title,
+		Description: createdTask.Description,
+		Done:        createdTask.Done,
+		UserID:      createdTask.UserID,
+	}
+
+	c.JSON(http.StatusCreated, response)
 }
 
 func GetTaskByID(c *gin.Context) {
@@ -175,25 +187,36 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	var task models.Task
+	var updateTaskRequest models.UpdateTaskRequest
 
-	if err := c.ShouldBindJSON(&task); err != nil {
+	if err := c.ShouldBindJSON(&updateTaskRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
 		})
 		return
 	}
 
-	updatedTask, err := services.UpdateTask(id, task)
+	// At least one field must be provided
+	if updateTaskRequest.Title == nil &&
+		updateTaskRequest.Description == nil &&
+		updateTaskRequest.Done == nil {
+
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "at least one field (title, description, done) must be provided for update",
+		})
+		return
+	}
+
+	updatedTask, err := services.UpdateTask(uint(id), updateTaskRequest)
 	if err != nil {
 		switch {
+
 		case errors.Is(err, services.ErrTitleRequired):
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error(),
 			})
 
-		case errors.Is(err, services.ErrTaskNotFound),
-			errors.Is(err, services.ErrUserNotFound):
+		case errors.Is(err, services.ErrTaskNotFound):
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": err.Error(),
 			})
@@ -203,6 +226,7 @@ func UpdateTask(c *gin.Context) {
 				"error": "internal server error",
 			})
 		}
+
 		return
 	}
 

@@ -120,57 +120,54 @@ func GetTaskByID(id int) (models.Task, error) {
 	return task, nil
 }
 
-func UpdateTask(id int, updated models.Task) (models.Task, error) {
+func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse, error) {
 	var existingTask models.Task
 
+	// Find existing task
 	err := database.DB.First(&existingTask, id).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return models.Task{}, ErrTaskNotFound
+		return models.TaskResponse{}, ErrTaskNotFound
 	}
 
 	if err != nil {
-		return models.Task{}, err
+		return models.TaskResponse{}, err
 	}
 
-	updated.Title = strings.TrimSpace(updated.Title)
-	updated.Description = strings.TrimSpace(updated.Description)
+	// Update title only if provided
+	if request.Title != nil {
+		title := strings.TrimSpace(*request.Title)
 
-	if updated.Title == "" {
-		return models.Task{}, ErrTitleRequired
-	}
-
-	existingTask.Title = updated.Title
-	existingTask.Description = updated.Description
-	existingTask.Done = updated.Done
-
-	if updated.UserID != 0 {
-		var user models.User
-
-		err := database.DB.First(&user, updated.UserID).Error
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return models.Task{}, ErrUserNotFound
+		if title == "" {
+			return models.TaskResponse{}, ErrTitleRequired
 		}
 
-		if err != nil {
-			return models.Task{}, err
-		}
-
-		existingTask.UserID = updated.UserID
+		existingTask.Title = title
 	}
 
+	// Update description only if provided
+	if request.Description != nil {
+		existingTask.Description = strings.TrimSpace(*request.Description)
+	}
+
+	// Update done only if provided
+	if request.Done != nil {
+		existingTask.Done = *request.Done
+	}
+
+	// Save changes
 	if err := database.DB.Save(&existingTask).Error; err != nil {
-		return models.Task{}, err
+		return models.TaskResponse{}, err
 	}
 
-	if err := database.DB.
-		Preload("User").
-		First(&existingTask, existingTask.ID).Error; err != nil {
-		return models.Task{}, err
-	}
-
-	return existingTask, nil
+	// Convert database model → response DTO
+	return models.TaskResponse{
+		ID:          existingTask.ID,
+		Title:       existingTask.Title,
+		Description: existingTask.Description,
+		Done:        existingTask.Done,
+		UserID:      existingTask.UserID,
+	}, nil
 }
 
 func DeleteTask(id int) error {
