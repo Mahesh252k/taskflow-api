@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"taskflow-api/models"
 	"taskflow-api/services"
@@ -24,17 +25,48 @@ func GetTasks(c *gin.Context) {
 	}
 
 	limit, err := strconv.Atoi(limitString)
-	if err != nil || limit < 1 {
+	if err != nil || limit < 1 || limit > 100 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "limit must be a positive integer",
+			"error": "limit must be a positive integer between 1 and 100",
 		})
 		return
 	}
 
+	sort := strings.ToLower(c.DefaultQuery("sort", "id"))
+
+	allowedSorts := map[string]bool{
+		"id":         true,
+		"title":      true,
+		"created_at": true,
+	}
+
+	if !allowedSorts[sort] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid sort field",
+		})
+		return
+	}
+
+	order := strings.ToLower(c.DefaultQuery("order", "asc"))
+
+	allowedOrders := map[string]bool{
+		"asc":  true,
+		"desc": true,
+	}
+
+	if !allowedOrders[order] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid order value",
+		})
+		return
+	}
+
+	search := strings.TrimSpace(c.Query("search"))
+
 	filter := models.TaskFilter{
-		Sort:   c.DefaultQuery("sort", "id"),
-		Order:  c.DefaultQuery("order", "asc"),
-		Search: c.Query("search"),
+		Sort:   sort,
+		Order:  order,
+		Search: search,
 	}
 
 	if doneString, exists := c.GetQuery("done"); exists {

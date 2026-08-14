@@ -42,28 +42,8 @@ func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListRespons
 		query = query.Where("user_id = ?", filter.UserID)
 	}
 
-	// Count AFTER filters, BEFORE pagination
 	if err := query.Count(&total).Error; err != nil {
 		return models.TaskListResponse{}, err
-	}
-
-	allowedSorts := map[string]bool{
-		"id":         true,
-		"title":      true,
-		"created_at": true,
-	}
-
-	allowedOrders := map[string]bool{
-		"asc":  true,
-		"desc": true,
-	}
-
-	if !allowedSorts[filter.Sort] {
-		filter.Sort = "id"
-	}
-
-	if !allowedOrders[filter.Order] {
-		filter.Order = "asc"
 	}
 
 	query = query.Order(filter.Sort + " " + filter.Order)
