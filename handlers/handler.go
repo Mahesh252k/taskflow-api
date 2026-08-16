@@ -234,22 +234,24 @@ func UpdateTask(c *gin.Context) {
 }
 
 func DeleteTask(c *gin.Context) {
-	id, err := parseTaskID(c)
-	if err != nil {
+	idstring := c.Param("id")
+
+	id, err := strconv.ParseUint(idstring, 10, 64)
+	if err != nil || id < 1 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid task ID",
+			"error": "please send the correct id",
 		})
 		return
 	}
 
-	if err := services.DeleteTask(id); err != nil {
+	err = services.DeleteTask(uint(id))
+	if err != nil {
 		if errors.Is(err, services.ErrTaskNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
+				"error": "task not found",
 			})
 			return
 		}
-
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "internal server error",
 		})
@@ -259,6 +261,7 @@ func DeleteTask(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "task deleted successfully",
 	})
+
 }
 
 func parseTaskID(c *gin.Context) (int, error) {

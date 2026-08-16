@@ -170,7 +170,7 @@ func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse,
 	}, nil
 }
 
-func DeleteTask(id int) error {
+func DeleteTask(id uint) error {
 	var task models.Task
 
 	err := database.DB.First(&task, id).Error
