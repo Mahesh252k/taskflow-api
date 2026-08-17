@@ -95,9 +95,7 @@ func GetTasks(c *gin.Context) {
 
 	response, err := services.GetTasks(page, limit, filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
+		HandleServiceError(c, err)
 		return
 	}
 
@@ -120,23 +118,7 @@ func CreateTask(c *gin.Context) {
 		UserID:      createTaskRequest.UserID,
 	})
 	if err != nil {
-		switch {
-		case errors.Is(err, services.ErrTitleRequired),
-			errors.Is(err, services.ErrUserRequired):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-
-		case errors.Is(err, services.ErrUserNotFound):
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
-
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "internal server error",
-			})
-		}
+		HandleServiceError(c, err)
 		return
 	}
 
@@ -162,16 +144,7 @@ func GetTaskByID(c *gin.Context) {
 
 	task, err := services.GetTaskByID(id)
 	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
+		HandleServiceError(c, err)
 		return
 	}
 
@@ -196,7 +169,6 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	// At least one field must be provided
 	if updateTaskRequest.Title == nil &&
 		updateTaskRequest.Description == nil &&
 		updateTaskRequest.Done == nil {
@@ -209,24 +181,7 @@ func UpdateTask(c *gin.Context) {
 
 	updatedTask, err := services.UpdateTask(uint(id), updateTaskRequest)
 	if err != nil {
-		switch {
-
-		case errors.Is(err, services.ErrTitleRequired):
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-
-		case errors.Is(err, services.ErrTaskNotFound):
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
-
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "internal server error",
-			})
-		}
-
+		HandleServiceError(c, err)
 		return
 	}
 
@@ -234,34 +189,23 @@ func UpdateTask(c *gin.Context) {
 }
 
 func DeleteTask(c *gin.Context) {
-	idstring := c.Param("id")
-
-	id, err := strconv.ParseUint(idstring, 10, 64)
-	if err != nil || id < 1 {
+	id, err := parseTaskID(c)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "please send the correct id",
+			"error": "invalid task ID",
 		})
 		return
 	}
 
 	err = services.DeleteTask(uint(id))
 	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": "task not found",
-			})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
+		HandleServiceError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "task deleted successfully",
 	})
-
 }
 
 func parseTaskID(c *gin.Context) (int, error) {
