@@ -95,7 +95,7 @@ func GetTasks(c *gin.Context) {
 
 	response, err := services.GetTasks(page, limit, filter)
 	if err != nil {
-		HandleServiceError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func CreateTask(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&createTaskRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid request body",
+			"error": "validation failed: " + err.Error(),
 		})
 		return
 	}
@@ -118,7 +118,7 @@ func CreateTask(c *gin.Context) {
 		UserID:      createTaskRequest.UserID,
 	})
 	if err != nil {
-		HandleServiceError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 
@@ -144,7 +144,7 @@ func GetTaskByID(c *gin.Context) {
 
 	task, err := services.GetTaskByID(id)
 	if err != nil {
-		HandleServiceError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 
@@ -164,7 +164,7 @@ func UpdateTask(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&updateTaskRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid request body",
+			"error": "validation failed: " + err.Error(),
 		})
 		return
 	}
@@ -179,9 +179,9 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	updatedTask, err := services.UpdateTask(uint(id), updateTaskRequest)
+	updatedTask, err := services.UpdateTask(id, updateTaskRequest)
 	if err != nil {
-		HandleServiceError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 
@@ -197,9 +197,9 @@ func DeleteTask(c *gin.Context) {
 		return
 	}
 
-	err = services.DeleteTask(uint(id))
+	err = services.DeleteTask(id)
 	if err != nil {
-		HandleServiceError(c, err)
+		handleServiceError(c, err)
 		return
 	}
 
@@ -208,11 +208,11 @@ func DeleteTask(c *gin.Context) {
 	})
 }
 
-func parseTaskID(c *gin.Context) (int, error) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil || id <= 0 {
+func parseTaskID(c *gin.Context) (uint, error) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil || id < 1 {
 		return 0, errors.New("invalid task ID")
 	}
 
-	return id, nil
+	return uint(id), nil
 }

@@ -102,7 +102,7 @@ func CreateTask(task models.Task) (models.Task, error) {
 	return task, nil
 }
 
-func GetTaskByID(id int) (models.Task, error) {
+func GetTaskByID(id uint) (models.Task, error) {
 	var task models.Task
 
 	err := database.DB.
@@ -123,9 +123,7 @@ func GetTaskByID(id int) (models.Task, error) {
 func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse, error) {
 	var existingTask models.Task
 
-	// Find existing task
 	err := database.DB.First(&existingTask, id).Error
-
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.TaskResponse{}, ErrTaskNotFound
 	}
@@ -134,7 +132,8 @@ func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse,
 		return models.TaskResponse{}, err
 	}
 
-	// Update title only if provided
+	updates := map[string]interface{}{}
+
 	if request.Title != nil {
 		title := strings.TrimSpace(*request.Title)
 
@@ -142,25 +141,26 @@ func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse,
 			return models.TaskResponse{}, ErrTitleRequired
 		}
 
-		existingTask.Title = title
+		updates["title"] = title
 	}
 
-	// Update description only if provided
 	if request.Description != nil {
-		existingTask.Description = strings.TrimSpace(*request.Description)
+		updates["description"] = strings.TrimSpace(*request.Description)
 	}
 
-	// Update done only if provided
 	if request.Done != nil {
-		existingTask.Done = *request.Done
+		updates["done"] = *request.Done
 	}
 
-	// Save changes
-	if err := database.DB.Save(&existingTask).Error; err != nil {
+	if err := database.DB.Model(&existingTask).Updates(updates).Error; err != nil {
 		return models.TaskResponse{}, err
 	}
 
-	// Convert database model → response DTO
+	// Reload updated task
+	if err := database.DB.First(&existingTask, id).Error; err != nil {
+		return models.TaskResponse{}, err
+	}
+
 	return models.TaskResponse{
 		ID:          existingTask.ID,
 		Title:       existingTask.Title,

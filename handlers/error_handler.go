@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"taskflow-api/services"
@@ -9,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func HandleServiceError(c *gin.Context, err error) {
+func handleServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, services.ErrTitleRequired),
 		errors.Is(err, services.ErrUserRequired):
@@ -24,6 +25,8 @@ func HandleServiceError(c *gin.Context, err error) {
 		})
 
 	default:
+		log.Print("unexpected service error: %v", err)
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "internal server error",
 		})
