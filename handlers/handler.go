@@ -47,6 +47,41 @@ func RegisterUser(c *gin.Context) {
 
 }
 
+func LoginUser(c *gin.Context) {
+	var req models.LoginUserRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid request body",
+		})
+		return
+	}
+
+	user, err := services.LoginUser(req)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidCredentials) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to login user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "user logged in successfully",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+		},
+	})
+}
+
 func GetTasks(c *gin.Context) {
 	pageString := c.DefaultQuery("page", "1")
 	limitString := c.DefaultQuery("limit", "10")

@@ -17,6 +17,7 @@ var (
 	ErrTitleRequired      = errors.New("title is required")
 	ErrUserRequired       = errors.New("user ID is required")
 	ErrEmailAlreadyExists = errors.New("email already exists")
+	ErrInvalidCredentials = errors.New("invalid email or password")
 )
 
 func RegisterUser(req models.RegisterUserRequest) (models.User, error) {
@@ -50,6 +51,31 @@ func RegisterUser(req models.RegisterUserRequest) (models.User, error) {
 
 	if err := database.DB.Create(&user).Error; err != nil {
 		return models.User{}, err
+	}
+
+	return user, nil
+}
+
+func LoginUser(req models.LoginUserRequest) (models.User, error) {
+	var user models.User
+
+	err := database.DB.
+		Where("email = ?", req.Email).
+		First(&user).Error
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return models.User{}, ErrInvalidCredentials
+	}
+
+	if err != nil {
+		return models.User{}, err
+	}
+
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.Password),
+		[]byte(req.Password),
+	); err != nil {
+		return models.User{}, ErrInvalidCredentials
 	}
 
 	return user, nil

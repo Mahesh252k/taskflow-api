@@ -8,6 +8,7 @@ import (
 
 func SetupRoutes(router *gin.Engine) {
 	router.POST("/users/register", handlers.RegisterUser)
+	router.POST("/users/login", handlers.LoginUser)
 	taskRoutes := router.Group("/tasks")
 	{
 		taskRoutes.GET("", handlers.GetTasks)
