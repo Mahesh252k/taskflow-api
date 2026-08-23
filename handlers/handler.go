@@ -12,6 +12,41 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func RegisterUser(c *gin.Context) {
+	var req models.RegisterUserRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid request body",
+		})
+		return
+	}
+
+	user, err := services.RegisterUser(req)
+	if err != nil {
+		if errors.Is(err, services.ErrEmailAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to register user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "user registered successfully",
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+		},
+	})
+
+}
+
 func GetTasks(c *gin.Context) {
 	pageString := c.DefaultQuery("page", "1")
 	limitString := c.DefaultQuery("limit", "10")

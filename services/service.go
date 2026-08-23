@@ -7,15 +7,53 @@ import (
 	"taskflow-api/database"
 	"taskflow-api/models"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 var (
-	ErrTaskNotFound  = errors.New("task not found")
-	ErrUserNotFound  = errors.New("user not found")
-	ErrTitleRequired = errors.New("title is required")
-	ErrUserRequired  = errors.New("user ID is required")
+	ErrTaskNotFound       = errors.New("task not found")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrTitleRequired      = errors.New("title is required")
+	ErrUserRequired       = errors.New("user ID is required")
+	ErrEmailAlreadyExists = errors.New("email already exists")
 )
+
+func RegisterUser(req models.RegisterUserRequest) (models.User, error) {
+	var existingUser models.User
+
+	err := database.DB.
+		Where("email = ?", req.Email).
+		First(&existingUser).Error
+
+	if err == nil {
+		return models.User{}, ErrEmailAlreadyExists
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return models.User{}, err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword(
+		[]byte(req.Password),
+		bcrypt.DefaultCost,
+	)
+
+	if err != nil {
+		return models.User{}, err
+	}
+
+	user := models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: string(hashedPassword),
+	}
+
+	if err := database.DB.Create(&user).Error; err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
 
 func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListResponse, error) {
 	var tasks []models.Task
