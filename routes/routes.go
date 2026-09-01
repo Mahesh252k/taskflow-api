@@ -2,6 +2,7 @@ package routes
 
 import (
 	"taskflow-api/handlers"
+	"taskflow-api/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,8 +10,11 @@ import (
 func SetupRoutes(router *gin.Engine) {
 	router.POST("/users/register", handlers.RegisterUser)
 	router.POST("/users/login", handlers.LoginUser)
+
 	taskRoutes := router.Group("/tasks")
 	{
+		taskRoutes.Use(middleware.Auth())
+
 		taskRoutes.GET("", handlers.GetTasks)
 		taskRoutes.POST("", handlers.CreateTask)
 		taskRoutes.GET("/:id", handlers.GetTaskByID)

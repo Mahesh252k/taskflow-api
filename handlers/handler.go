@@ -57,7 +57,7 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	user, err := services.LoginUser(req)
+	loginResponse, err := services.LoginUser(req)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidCredentials) {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -75,10 +75,11 @@ func LoginUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "user logged in successfully",
 		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
+			"id":    loginResponse.ID,
+			"name":  loginResponse.Name,
+			"email": loginResponse.Email,
 		},
+		"token": loginResponse.Token,
 	})
 }
 
@@ -151,17 +152,23 @@ func GetTasks(c *gin.Context) {
 		filter.Done = &done
 	}
 
-	if userIDString, exists := c.GetQuery("user_id"); exists {
-		userID, err := strconv.ParseUint(userIDString, 10, 64)
-		if err != nil || userID < 1 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "user_id must be a positive integer",
-			})
-			return
-		}
-
-		filter.UserID = uint(userID)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
 	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	filter.UserID = userID
 
 	response, err := services.GetTasks(page, limit, filter)
 	if err != nil {
@@ -182,10 +189,26 @@ func CreateTask(c *gin.Context) {
 		return
 	}
 
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
 	createdTask, err := services.CreateTask(models.Task{
 		Title:       createTaskRequest.Title,
 		Description: createTaskRequest.Description,
-		UserID:      createTaskRequest.UserID,
+		UserID:      userID,
 	})
 	if err != nil {
 		handleServiceError(c, err)
@@ -212,7 +235,23 @@ func GetTaskByID(c *gin.Context) {
 		return
 	}
 
-	task, err := services.GetTaskByID(id)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	task, err := services.GetTaskByID(id, userID)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -249,7 +288,23 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	updatedTask, err := services.UpdateTask(id, updateTaskRequest)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	updatedTask, err := services.UpdateTask(id, userID, updateTaskRequest)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -267,7 +322,23 @@ func DeleteTask(c *gin.Context) {
 		return
 	}
 
-	err = services.DeleteTask(id)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	userID, ok := userIDValue.(uint)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	err = services.DeleteTask(id, userID)
 	if err != nil {
 		handleServiceError(c, err)
 		return

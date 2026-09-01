@@ -18,8 +18,8 @@ func main() {
 	migrations.Seed()
 
 	router := gin.Default()
+
 	router.Use(middleware.Logger())
-	router.Use(middleware.Auth())
 
 	routes.SetupRoutes(router)
 

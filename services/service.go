@@ -6,6 +6,7 @@ import (
 
 	"taskflow-api/database"
 	"taskflow-api/models"
+	"taskflow-api/utils"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -56,29 +57,33 @@ func RegisterUser(req models.RegisterUserRequest) (models.User, error) {
 	return user, nil
 }
 
-func LoginUser(req models.LoginUserRequest) (models.User, error) {
+func LoginUser(req models.LoginUserRequest) (models.LoginUserResponse, error) {
 	var user models.User
 
-	err := database.DB.
-		Where("email = ?", req.Email).
-		First(&user).Error
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return models.User{}, ErrInvalidCredentials
-	}
-
+	err := database.DB.Where("email = ?", req.Email).First(&user).Error
 	if err != nil {
-		return models.User{}, err
+		return models.LoginUserResponse{}, ErrInvalidCredentials
 	}
 
-	if err := bcrypt.CompareHashAndPassword(
+	err = bcrypt.CompareHashAndPassword(
 		[]byte(user.Password),
 		[]byte(req.Password),
-	); err != nil {
-		return models.User{}, ErrInvalidCredentials
+	)
+	if err != nil {
+		return models.LoginUserResponse{}, ErrInvalidCredentials
 	}
 
-	return user, nil
+	token, err := utils.GenerateToken(user.ID)
+	if err != nil {
+		return models.LoginUserResponse{}, err
+	}
+
+	return models.LoginUserResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		Token: token,
+	}, nil
 }
 
 func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListResponse, error) {
@@ -166,12 +171,13 @@ func CreateTask(task models.Task) (models.Task, error) {
 	return task, nil
 }
 
-func GetTaskByID(id uint) (models.Task, error) {
+func GetTaskByID(id uint, userID uint) (models.Task, error) {
 	var task models.Task
 
 	err := database.DB.
 		Preload("User").
-		First(&task, id).Error
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&task).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.Task{}, ErrTaskNotFound
@@ -184,10 +190,13 @@ func GetTaskByID(id uint) (models.Task, error) {
 	return task, nil
 }
 
-func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse, error) {
+func UpdateTask(id uint, userID uint, request models.UpdateTaskRequest) (models.TaskResponse, error) {
 	var existingTask models.Task
 
-	err := database.DB.First(&existingTask, id).Error
+	err := database.DB.
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&existingTask).Error
+
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.TaskResponse{}, ErrTaskNotFound
 	}
@@ -220,7 +229,6 @@ func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse,
 		return models.TaskResponse{}, err
 	}
 
-	// Reload updated task
 	if err := database.DB.First(&existingTask, id).Error; err != nil {
 		return models.TaskResponse{}, err
 	}
@@ -234,10 +242,12 @@ func UpdateTask(id uint, request models.UpdateTaskRequest) (models.TaskResponse,
 	}, nil
 }
 
-func DeleteTask(id uint) error {
+func DeleteTask(id uint, userID uint) error {
 	var task models.Task
 
-	err := database.DB.First(&task, id).Error
+	err := database.DB.
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&task).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrTaskNotFound
