@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"taskflow-api/config"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("my-super-secret-key")
-
 func GenerateToken(userID uint) (string, error) {
+	jwtSecret := []byte(config.GetEnv("JWT_SECRET"))
+
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
@@ -21,8 +23,10 @@ func GenerateToken(userID uint) (string, error) {
 }
 
 func ValidateToken(tokenString string) (uint, error) {
+	jwtSecret := []byte(config.GetEnv("JWT_SECRET"))
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if token.Method != jwt.SigningMethodHS256 {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
 
