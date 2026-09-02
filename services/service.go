@@ -90,8 +90,10 @@ func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListRespons
 	var tasks []models.Task
 	var total int64
 
-	query := database.DB.Model(&models.Task{}).
-		Preload("User")
+	query := database.DB.
+		Model(&models.Task{}).
+		Preload("User").
+		Where("user_id = ?", filter.UserID)
 
 	if filter.Done != nil {
 		query = query.Where("done = ?", *filter.Done)
@@ -105,10 +107,6 @@ func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListRespons
 			search,
 			search,
 		)
-	}
-
-	if filter.UserID != 0 {
-		query = query.Where("user_id = ?", filter.UserID)
 	}
 
 	if err := query.Count(&total).Error; err != nil {
@@ -190,7 +188,12 @@ func GetTaskByID(id uint, userID uint) (models.Task, error) {
 	return task, nil
 }
 
-func UpdateTask(id uint, userID uint, request models.UpdateTaskRequest) (models.TaskResponse, error) {
+func UpdateTask(
+	id uint,
+	userID uint,
+	request models.UpdateTaskRequest,
+) (models.TaskResponse, error) {
+
 	var existingTask models.Task
 
 	err := database.DB.
@@ -225,11 +228,17 @@ func UpdateTask(id uint, userID uint, request models.UpdateTaskRequest) (models.
 		updates["done"] = *request.Done
 	}
 
-	if err := database.DB.Model(&existingTask).Updates(updates).Error; err != nil {
+	if err := database.DB.
+		Model(&existingTask).
+		Updates(updates).Error; err != nil {
+
 		return models.TaskResponse{}, err
 	}
 
-	if err := database.DB.First(&existingTask, id).Error; err != nil {
+	if err := database.DB.
+		Where("id = ? AND user_id = ?", id, userID).
+		First(&existingTask).Error; err != nil {
+
 		return models.TaskResponse{}, err
 	}
 
