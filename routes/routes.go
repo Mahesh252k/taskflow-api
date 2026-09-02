@@ -10,6 +10,13 @@ import (
 func SetupRoutes(router *gin.Engine) {
 	router.POST("/users/register", handlers.RegisterUser)
 	router.POST("/users/login", handlers.LoginUser)
+	adminRoutes := router.Group("/admin")
+	{
+		adminRoutes.Use(middleware.Auth())
+		adminRoutes.Use(middleware.AdminOnly())
+
+		adminRoutes.GET("/tasks", handlers.GetAllTasks)
+	}
 
 	taskRoutes := router.Group("/tasks")
 	{

@@ -9,11 +9,12 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(userID uint) (string, error) {
+func GenerateToken(userID uint, role string) (string, error) {
 	jwtSecret := []byte(config.GetEnv("JWT_SECRET"))
 
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"role":    role,
 		"exp":     time.Now().Add(15 * time.Minute).Unix(),
 	}
 
@@ -22,7 +23,7 @@ func GenerateToken(userID uint) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-func ValidateToken(tokenString string) (uint, error) {
+func ValidateToken(tokenString string) (uint, string, error) {
 	jwtSecret := []byte(config.GetEnv("JWT_SECRET"))
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -34,18 +35,23 @@ func ValidateToken(tokenString string) (uint, error) {
 	})
 
 	if err != nil || !token.Valid {
-		return 0, fmt.Errorf("invalid token")
+		return 0, "", fmt.Errorf("invalid token")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return 0, fmt.Errorf("invalid token claims")
+		return 0, "", fmt.Errorf("invalid token claims")
 	}
 
 	userIDFloat, ok := claims["user_id"].(float64)
 	if !ok {
-		return 0, fmt.Errorf("invalid user id")
+		return 0, "", fmt.Errorf("invalid user id")
 	}
 
-	return uint(userIDFloat), nil
+	role, ok := claims["role"].(string)
+	if !ok {
+		return 0, "", fmt.Errorf("invalid role")
+	}
+
+	return uint(userIDFloat), role, nil
 }

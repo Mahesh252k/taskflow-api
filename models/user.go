@@ -8,5 +8,6 @@ type User struct {
 	Name     string `json:"name"`
 	Email    string `gorm:"unique;not null" json:"email"`
 	Password string `gorm:"not null" json:"-"`
+	Role     string `gorm:"not null;default:user" json:"role"`
 	Tasks    []Task `json:"tasks,omitempty"`
 }

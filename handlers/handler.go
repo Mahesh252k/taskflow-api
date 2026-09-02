@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"taskflow-api/models"
 	"taskflow-api/services"
@@ -84,72 +83,12 @@ func LoginUser(c *gin.Context) {
 }
 
 func GetTasks(c *gin.Context) {
-	pageString := c.DefaultQuery("page", "1")
-	limitString := c.DefaultQuery("limit", "10")
-
-	page, err := strconv.Atoi(pageString)
-	if err != nil || page < 1 {
+	page, limit, filter, err := parseTaskQuery(c)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "page must be a positive integer",
+			"error": err.Error(),
 		})
 		return
-	}
-
-	limit, err := strconv.Atoi(limitString)
-	if err != nil || limit < 1 || limit > 100 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "limit must be a positive integer between 1 and 100",
-		})
-		return
-	}
-
-	sort := strings.ToLower(c.DefaultQuery("sort", "id"))
-
-	allowedSorts := map[string]bool{
-		"id":         true,
-		"title":      true,
-		"created_at": true,
-	}
-
-	if !allowedSorts[sort] {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid sort field",
-		})
-		return
-	}
-
-	order := strings.ToLower(c.DefaultQuery("order", "asc"))
-
-	allowedOrders := map[string]bool{
-		"asc":  true,
-		"desc": true,
-	}
-
-	if !allowedOrders[order] {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "invalid order value",
-		})
-		return
-	}
-
-	search := strings.TrimSpace(c.Query("search"))
-
-	filter := models.TaskFilter{
-		Sort:   sort,
-		Order:  order,
-		Search: search,
-	}
-
-	if doneString, exists := c.GetQuery("done"); exists {
-		done, err := strconv.ParseBool(doneString)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "done must be true or false",
-			})
-			return
-		}
-
-		filter.Done = &done
 	}
 
 	userID, ok := getUserID(c)
@@ -161,6 +100,24 @@ func GetTasks(c *gin.Context) {
 	}
 
 	filter.UserID = userID
+
+	response, err := services.GetTasks(page, limit, filter)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func GetAllTasks(c *gin.Context) {
+	page, limit, filter, err := parseTaskQuery(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
 
 	response, err := services.GetTasks(page, limit, filter)
 	if err != nil {

@@ -73,7 +73,7 @@ func LoginUser(req models.LoginUserRequest) (models.LoginUserResponse, error) {
 		return models.LoginUserResponse{}, ErrInvalidCredentials
 	}
 
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.ID, user.Role)
 	if err != nil {
 		return models.LoginUserResponse{}, err
 	}
@@ -92,8 +92,11 @@ func GetTasks(page, limit int, filter models.TaskFilter) (models.TaskListRespons
 
 	query := database.DB.
 		Model(&models.Task{}).
-		Preload("User").
-		Where("user_id = ?", filter.UserID)
+		Preload("User")
+
+	if filter.UserID != 0 {
+		query = query.Where("user_id = ?", filter.UserID)
+	}
 
 	if filter.Done != nil {
 		query = query.Where("done = ?", *filter.Done)

@@ -39,7 +39,7 @@ func Auth() gin.HandlerFunc {
 			return
 		}
 
-		userID, err := utils.ValidateToken(tokenString)
+		userID, role, err := utils.ValidateToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid or expired token",
@@ -49,6 +49,7 @@ func Auth() gin.HandlerFunc {
 		}
 
 		c.Set("user_id", userID)
+		c.Set("role", role)
 
 		c.Next()
 	}
