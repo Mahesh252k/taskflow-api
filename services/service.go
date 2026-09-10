@@ -172,13 +172,18 @@ func CreateTask(task models.Task) (models.Task, error) {
 	return task, nil
 }
 
-func GetTaskByID(id uint, userID uint) (models.Task, error) {
+func GetTaskByID(id uint, userID uint, role string) (models.Task, error) {
 	var task models.Task
 
-	err := database.DB.
+	query := database.DB.
 		Preload("User").
-		Where("id = ? AND user_id = ?", id, userID).
-		First(&task).Error
+		Where("id = ?", id)
+
+	if role != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	err := query.First(&task).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.Task{}, ErrTaskNotFound
@@ -194,14 +199,20 @@ func GetTaskByID(id uint, userID uint) (models.Task, error) {
 func UpdateTask(
 	id uint,
 	userID uint,
+	role string,
 	request models.UpdateTaskRequest,
 ) (models.TaskResponse, error) {
 
 	var existingTask models.Task
 
-	err := database.DB.
-		Where("id = ? AND user_id = ?", id, userID).
-		First(&existingTask).Error
+	query := database.DB.
+		Where("id = ?", id)
+
+	if role != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	err := query.First(&existingTask).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.TaskResponse{}, ErrTaskNotFound
@@ -239,7 +250,7 @@ func UpdateTask(
 	}
 
 	if err := database.DB.
-		Where("id = ? AND user_id = ?", id, userID).
+		Where("id = ?", id).
 		First(&existingTask).Error; err != nil {
 
 		return models.TaskResponse{}, err
@@ -254,12 +265,17 @@ func UpdateTask(
 	}, nil
 }
 
-func DeleteTask(id uint, userID uint) error {
+func DeleteTask(id uint, userID uint, role string) error {
 	var task models.Task
 
-	err := database.DB.
-		Where("id = ? AND user_id = ?", id, userID).
-		First(&task).Error
+	query := database.DB.
+		Where("id = ?", id)
+
+	if role != "admin" {
+		query = query.Where("user_id = ?", userID)
+	}
+
+	err := query.First(&task).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ErrTaskNotFound

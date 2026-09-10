@@ -77,3 +77,17 @@ func parseTaskQuery(c *gin.Context) (int, int, models.TaskFilter, error) {
 
 	return page, limit, filter, nil
 }
+
+func getUserRole(c *gin.Context) (string, bool) {
+	roleValue, exists := c.Get("role")
+	if !exists {
+		return "", false
+	}
+
+	role, ok := roleValue.(string)
+	if !ok {
+		return "", false
+	}
+
+	return role, true
+}

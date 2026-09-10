@@ -184,7 +184,15 @@ func GetTaskByID(c *gin.Context) {
 		return
 	}
 
-	task, err := services.GetTaskByID(id, userID)
+	role, ok := getUserRole(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	task, err := services.GetTaskByID(id, userID, role)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -229,7 +237,20 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	updatedTask, err := services.UpdateTask(id, userID, updateTaskRequest)
+	role, ok := getUserRole(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	updatedTask, err := services.UpdateTask(
+		id,
+		userID,
+		role,
+		updateTaskRequest,
+	)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -255,7 +276,15 @@ func DeleteTask(c *gin.Context) {
 		return
 	}
 
-	err = services.DeleteTask(id, userID)
+	role, ok := getUserRole(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	err = services.DeleteTask(id, userID, role)
 	if err != nil {
 		handleServiceError(c, err)
 		return
