@@ -91,3 +91,17 @@ func getUserRole(c *gin.Context) (string, bool) {
 
 	return role, true
 }
+
+func getAuthUser(c *gin.Context) (uint, string, bool) {
+	userID, ok := getUserID(c)
+	if !ok {
+		return 0, "", false
+	}
+
+	role, ok := getUserRole(c)
+	if !ok {
+		return 0, "", false
+	}
+
+	return userID, role, true
+}

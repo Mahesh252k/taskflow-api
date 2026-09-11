@@ -175,16 +175,7 @@ func GetTaskByID(c *gin.Context) {
 		})
 		return
 	}
-
-	userID, ok := getUserID(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "unauthorized",
-		})
-		return
-	}
-
-	role, ok := getUserRole(c)
+	userID, role, ok := getAuthUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "unauthorized",
@@ -229,15 +220,7 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	userID, ok := getUserID(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "unauthorized",
-		})
-		return
-	}
-
-	role, ok := getUserRole(c)
+	userID, role, ok := getAuthUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "unauthorized",
@@ -268,15 +251,7 @@ func DeleteTask(c *gin.Context) {
 		return
 	}
 
-	userID, ok := getUserID(c)
-	if !ok {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "unauthorized",
-		})
-		return
-	}
-
-	role, ok := getUserRole(c)
+	userID, role, ok := getAuthUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "unauthorized",
