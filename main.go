@@ -17,6 +17,8 @@ func main() {
 	migrations.RunMigrations()
 	migrations.Seed()
 
+	go middleware.CleanupRateLimits()
+
 	router := gin.Default()
 
 	router.Use(middleware.Logger())

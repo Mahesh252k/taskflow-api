@@ -18,9 +18,15 @@ var (
 	mu    sync.Mutex
 )
 
+const (
+	requestLimit = 5
+	window       = time.Minute
+)
+
 func RateLimit() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		userID := c.GetUint("user_id")
+
 		mu.Lock()
 
 		limit, exists := users[userID]
@@ -33,14 +39,14 @@ func RateLimit() gin.HandlerFunc {
 			users[userID] = limit
 		}
 
-		if time.Since(limit.StartedAt) >= time.Minute {
+		if time.Since(limit.StartedAt) >= window {
 			limit.Count = 0
 			limit.StartedAt = time.Now()
 		}
 
 		limit.Count++
 
-		if limit.Count > 5 {
+		if limit.Count > requestLimit {
 			mu.Unlock()
 
 			c.JSON(http.StatusTooManyRequests, gin.H{
@@ -53,5 +59,21 @@ func RateLimit() gin.HandlerFunc {
 		mu.Unlock()
 
 		c.Next()
+	}
+}
+
+func CleanupRateLimits() {
+	for {
+		time.Sleep(time.Minute)
+
+		mu.Lock()
+
+		for userID, limit := range users {
+			if time.Since(limit.StartedAt) >= window {
+				delete(users, userID)
+			}
+		}
+
+		mu.Unlock()
 	}
 }
