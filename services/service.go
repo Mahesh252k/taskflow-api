@@ -196,12 +196,7 @@ func GetTaskByID(id uint, userID uint, role string) (models.Task, error) {
 	return task, nil
 }
 
-func UpdateTask(
-	id uint,
-	userID uint,
-	role string,
-	request models.UpdateTaskRequest,
-) (models.TaskResponse, error) {
+func UpdateTask(id uint, userID uint, role string, request models.UpdateTaskRequest) (models.TaskResponse, error) {
 
 	var existingTask models.Task
 

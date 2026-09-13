@@ -21,6 +21,7 @@ func SetupRoutes(router *gin.Engine) {
 	taskRoutes := router.Group("/tasks")
 	{
 		taskRoutes.Use(middleware.Auth())
+		taskRoutes.Use(middleware.RateLimit())
 
 		taskRoutes.GET("", handlers.GetTasks)
 		taskRoutes.POST("", handlers.CreateTask)
